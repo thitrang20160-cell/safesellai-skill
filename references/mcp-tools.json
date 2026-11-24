@@ -1,0 +1,768 @@
+{
+  "checkedOn": "2026-11-24",
+  "endpoint": "https://safesellai.com/mcp",
+  "guestSchemaSource": "Production tools/list, unauthenticated",
+  "accountSchemaSource": "Production tool registrations exported using a local SDK fixture, plus their shared start_here declaration as observed from the production guest session",
+  "guest": [
+    {
+      "name": "start_here",
+      "title": "从这里开始",
+      "description": "SafeSellAI 接入引导：返回文字版上手步骤（试查品牌词 → 批量排查 → 免费店铺体检）。支持 MCP Apps 的客户端会同时渲染欢迎面板。适用场景：刚接入、不知道先做什么时调用。",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "guest_info",
+      "description": "查询当前匿名试用的额度、免费店铺体检剩余次数与任务进度，不扣额度。适用场景：接入后先看还剩多少免费量、任务做到哪一步。",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_brand",
+      "description": "使用公开商标词排查检查单个品牌/关键词（含 TRO 命中），返回完整明细。适用场景：拿不准一个词能不能用在标题/品牌里时先查它。例：{\"brand\":\"nike\"}。匿名文字额度默认 100 词/天/IP（env MCP_GUEST_TEXT_WORDS_DAILY 可配）；更多额度与全部功能请用 API Key 连接。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_batch",
+      "description": "批量商标词排查（每次最多 20 词，含 TRO 命中），返回完整明细。适用场景：手里有一批词或多条 Listing 标题要一次过筛。例：{\"words\":[\"词1\",\"词2\"]}。首次完成批量排查可解锁 +1 次免费店铺体检。匿名文字额度默认 100 词/天/IP；大批量排查请用 API Key。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "words": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_tro",
+      "description": "查询单个品牌词的 TRO 涉诉命中摘要。适用场景：只想先确认某个词有没有 TRO 案件。例：{\"brand\":\"nike\"}。完整 TRO 案件检索请用 API Key。匿名额度与 check_brand 共用。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_image",
+      "description": "单图检查（文字、图形商标、TRO）。适用场景：单张商品图查商标与 TRO 风险。匿名试用暂未开放查图。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "image_url": {
+            "type": "string"
+          },
+          "image_b64": {
+            "type": "string"
+          },
+          "own_brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_link",
+      "description": "Listing 多维评分（商品 URL / ASIN / Walmart Item ID）。适用场景：给一条现成商品链接做全面体检。匿名试用暂未开放。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "store_audit",
+      "description": "免费店铺体检：提交商品清单 items（标题/品牌/卖点/描述），逐个做文字维度排查（商标词 + TRO），返回完整明细与风险汇总。单次最多 100 个 SKU（env MCP_GUEST_AUDIT_MAX_SKU 可配）；免费次数 = 基础 1 次 + 首次 check_batch 奖励 1 次（剩余查 guest_info）。图片版权/外观专利/平台合规维度不在免费版内。绑定店铺模式（storeId）需要账号在网页版绑定自有店铺并用店铺凭证拉商品，匿名没有账号与凭证、不可用，请使用 API Key。例：{\"items\":[{\"title\":\"Water Bottle 32oz\",\"brand\":\"Acme\"}]}",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "number"
+          },
+          "maxItems": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "brand": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "optimize_ai",
+      "description": "AI 改写 Listing。适用场景：标题/描述命中风险词后自动改写。匿名试用暂未开放。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_balance",
+      "description": "查询 S算力余额和套餐。适用场景：深度使用前先确认余额。匿名试用暂未开放（匿名额度请查 guest_info）。",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ],
+  "authenticated": [
+    {
+      "name": "start_here",
+      "title": "从这里开始",
+      "description": "SafeSellAI 接入引导：返回文字版上手步骤（试查品牌词 → 批量排查 → 免费店铺体检）。支持 MCP Apps 的客户端会同时渲染欢迎面板。适用场景：刚接入、不知道先做什么时调用。",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {}
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "website_tools",
+      "description": "列出当前版本可用的客户网页业务接口。MCP 继承网页计费、额度和账号隔离；目录不代表越权授权。可按 feature 搜索路径。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "website_request",
+      "description": "执行网页版业务接口，支持目录中的匹配库、店铺、绩效、专利、合规、上传与导出。使用原网页参数；query 为查询字段，body 为 JSON；上传用 files 数组（base64），不传鉴权头。写操作可能修改数据或扣费，规则和网页版相同；SSE 返回全部事件，文件返回内嵌资源。stream 可显式选择网页流式请求，默认按路由识别。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "body": {},
+          "stream": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "mimeType": {
+                  "type": "string"
+                },
+                "base64": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "name",
+                "mimeType",
+                "base64"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "method",
+          "path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_balance",
+      "description": "查询网页版 S算力余额和套餐，不扣费。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "tro_lawfirms",
+      "description": "查询真实 TRO 律所下单地址黑名单：系统记录及本账号自定义记录。可选 keyword 筛选地址或风险备注；无匹配不代表没有风险。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "whitelist_list",
+      "description": "查询当前账号真实商标词白名单。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "whitelist_add",
+      "description": "将词加入当前账号真实白名单，影响后续网页与插件排查。仅在用户确认该词可豁免后调用。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "whitelist_remove",
+      "description": "移除当前账号的真实白名单词，后续恢复正常排查。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_usage",
+      "description": "查询本账号近 N 天 API/MCP 调用统计与引导任务进度（quests），不扣费。网页版全部 S算力流水请用 website_request GET /api/scoin/transactions。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 30
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_brand",
+      "description": "使用网页版品牌查询检查品牌/关键词。适用场景：拿不准一个词能不能用在标题/品牌里时先查它。例：{\"brand\":\"nike\"}。权限与费用按网页版；category/position 为兼容字段，网页版查询以品牌词和账号词库为准。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_batch",
+      "description": "使用网页版批量品牌查询。适用场景：一批词或多条 Listing 标题一次过筛。例：{\"words\":[\"词1\",\"词2\"]}。批量上限由网页版校验（当前每次 500 词），MCP 不另设较小上限。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "words": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_link",
+      "description": "使用网页版 Listing 多维评分，支持商品 URL、ASIN 和 Walmart Item ID。额外维度实际执行，按网页版价格和余额检查扣费。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "imageDepth": {
+            "type": "number"
+          },
+          "dims": {
+            "type": "object",
+            "properties": {
+              "imageCopyright": {
+                "type": "boolean"
+              },
+              "designPatent": {
+                "type": "boolean"
+              },
+              "utilityPatent": {
+                "type": "boolean"
+              },
+              "compliance": {
+                "type": "boolean"
+              },
+              "compliancePlatform": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_tro",
+      "description": "使用网页版 TRO 案件查询。适用场景：确认某个词是否已有 TRO 涉诉案件。例：{\"brand\":\"nike\"}。费用和权限按网页版。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "brand"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "check_image",
+      "description": "使用网页版单图检查（文字、图形商标、TRO）。版权和外观专利请使用网页对应接口或 store_audit 的维度开关。费用、图片格式及大小按网页版。自有品牌以网页账号词库为准。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "image_url": {
+            "type": "string"
+          },
+          "image_b64": {
+            "type": "string"
+          },
+          "own_brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "optimize_ai",
+      "description": "使用网页版 AI 改写。费用及批量上限按网页版（当前最多 1000 SKU），MCP 不另设 50 条限制。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "brand": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": {
+                  "type": "string"
+                },
+                "riskHits": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "f6_hits",
+      "description": "使用网页版 F6 命中列表。权限及分页参数按网页版。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "store_audit",
+      "description": "店铺审查：提供 storeId 使用网页版绑定店铺体检；提供 items 使用网页批量商品检查及所选增量维度。无 MCP 独立 50/20 条上限；每个网页请求的限制、费用及账号词库照常适用。多步骤失败返回已完成部分，不自动重试或重复扣费。scanned:false 或未返回结果的维度表示未执行，不等于通过。own_brands 为兼容字段，自有品牌使用网页账号配置；跟卖检查不要把竞争店铺品牌加入自己的白名单。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "number"
+          },
+          "maxItems": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "brand": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "own_brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compliance": {
+            "type": "boolean"
+          },
+          "compliance_platform": {
+            "type": "string"
+          },
+          "patent": {
+            "type": "boolean"
+          },
+          "design_patent": {
+            "type": "boolean"
+          },
+          "copyright": {
+            "type": "boolean"
+          },
+          "trademark_vision": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ],
+  "freeAccountVisible": [
+    "start_here",
+    "website_tools",
+    "website_request",
+    "get_balance",
+    "get_usage",
+    "check_brand",
+    "check_batch",
+    "tro_lawfirms",
+    "whitelist_list",
+    "whitelist_add",
+    "whitelist_remove"
+  ],
+  "note": "Allowances, available operations and validation are determined by the live account and tools/list. A listed guest tool can return a key-required advisory.",
+  "onboarding": {
+    "prompts": [
+      "start_first_check",
+      "store_audit_guide"
+    ],
+    "welcomeResource": "ui://safesellai/welcome.html"
+  }
+}

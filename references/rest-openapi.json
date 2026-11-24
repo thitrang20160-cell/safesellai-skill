@@ -1,0 +1,791 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SafeSell AI 对外 API",
+    "version": "1.1.0",
+    "description": "# SafeSell AI 对外 API\n\n跨境电商侵权合规排查能力的程序化接口。仅 **企业版** 套餐可用。\n\n## 鉴权\n所有业务接口需在请求头携带 API Key：\n```\nAuthorization: Bearer YOUR_API_KEY\n```\n在网页端「设置 → API Keys」创建 Key（完整值仅展示一次）。\n\n## 限流\n- 单 Key：60 请求/分钟（可配）\n- 单账号：300 请求/分钟\n- 超限返回 `429` + `Retry-After: 60`\n\n## 计费（S算力）\n与网页端共用 S算力 池。各接口消耗见下方说明，余额不足返回 `402`。\n\n## 响应信封\n成功：`{ \"success\": true, \"data\": {...}, \"meta\": {...} }`\n失败：`{ \"success\": false, \"error\": { \"code\", \"message\" }, \"meta\": {...} }`"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "当前站点（same-origin，在线调试用）"
+    },
+    {
+      "url": "https://safesellai.com",
+      "description": "生产域名"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "check",
+      "description": "侵权排查"
+    },
+    {
+      "name": "optimize",
+      "description": "AI 优化"
+    },
+    {
+      "name": "f6",
+      "description": "F6 地址监控"
+    },
+    {
+      "name": "account",
+      "description": "账户 / 余额"
+    },
+    {
+      "name": "system",
+      "description": "系统"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "健康检查",
+        "security": [],
+        "description": "探活，无需鉴权。\n\n```bash\ncurl https://safesellai.com/api/v1/health\n```",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/balance": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "查询 S算力 余额",
+        "description": "消耗：0。Scope：`read:basic`。\n\n```bash\ncurl -H \"Authorization: Bearer YOUR_API_KEY\" https://safesellai.com/api/v1/balance\n```",
+        "responses": {
+          "200": {
+            "description": "余额"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/usage": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "查询 API 用量",
+        "description": "消耗：0。Scope：`read:basic`。查询参数 `days`（1-90，默认 30）。",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用量聚合"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/check/brand": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "品牌侵权查询",
+        "description": "消耗：**1 S算力**。Scope：`write:check`。\n\n```bash\ncurl -X POST https://safesellai.com/api/v1/check/brand \\\n  -H \"Authorization: Bearer YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"brand\":\"Nike\",\"category\":\"shoes\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "brand": "Nike",
+                "category": "shoes"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "风险结果"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/check/batch": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "批量词排查（≤100，套餐内 0 消耗）",
+        "description": "消耗：0（计入套餐）。Scope：`write:check`。\n\n两种写法：`words`（字符串数组，一律按品牌字段判）；或 `items`（`[{word, position}]`，position 取 `brand_field` / `title_first` / `title_other` / `user_query`，常用描述词在标题位置会降级）。每次最多 100 个。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "word": "Coffee",
+                    "position": "title_first"
+                  },
+                  {
+                    "word": "Nike",
+                    "position": "brand_field"
+                  }
+                ],
+                "category": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "逐词风险"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/check/link": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "商品链接抓取 + 侵权扫描",
+        "description": "消耗：**3 S算力**。Scope：`write:check`。支持 walmart/amazon/aliexpress/temu/shein。\n\n```bash\ncurl -X POST https://safesellai.com/api/v1/check/link \\\n  -H \"Authorization: Bearer YOUR_API_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\"url\":\"https://www.amazon.com/dp/B0XXXXXXX\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "url": "https://www.amazon.com/dp/B0XXXXXXX"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "商品+风险"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          },
+          "502": {
+            "description": "抓取失败"
+          }
+        }
+      }
+    },
+    "/api/v1/check/tro": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "品牌 TRO 历史查询",
+        "description": "消耗：0（目前免费）。Scope：`write:check`。返回该品牌历史 TRO 立案记录。\n\nTRO 案件库暂时不可用时返回 `503 tro_data_unavailable`（不扣费）。这**不代表**「未发现」，请稍后重试，不要当作无风险。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "brand": "Nike"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "TRO 命中"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "description": "TRO 案件库暂时不可用（未扣费，不代表未发现，请重试）",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/check/store-audit": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "批量商品结构化审查",
+        "description": "消耗：0（套餐内，≤50 条）。Scope：`write:audit`。对提供的 items[] 逐条风险扫描。`own_brands`（强烈建议传）：卖家自有品牌数组，命中词豁免——不传时自有品牌词会被误报为侵权。扫描截断：标题前 15 词 / 五点去重后 40 词 / 描述 50 词，五点请按数组逐点传。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "sku": "A1",
+                    "title": "Sports Shoes",
+                    "brand": "Nike",
+                    "features": [
+                      "breathable"
+                    ],
+                    "description": "..."
+                  }
+                ],
+                "own_brands": [
+                  "MyBrand"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "逐条审查结果（risks[] 含 word/position/risk/action/tmStatus，tro_hits[] 独立列出）"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/check/image": {
+      "post": {
+        "tags": [
+          "check"
+        ],
+        "summary": "图片品牌元素检测（换场景图指引）",
+        "description": "消耗：**8 S算力/张**（图上无文字且无视觉命中时免费）。Scope：`write:check`。判断商品图是否含品牌元素：图上文字撞 865 万商标库+TRO 词、CLIP 撞 TRO 涉诉产品图库、图形品牌标零样本识别。入参二选一：`image_b64`（推荐）或 `image_url`（主流电商图床白名单）。`own_brands` 豁免自有品牌。返回 `has_brand_element` 与 `suggestion`（replace_image_urgent/replace_image/ok）。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "image_b64": "<base64>",
+                "own_brands": [
+                  "MyBrand"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "检测结果（texts/brand_hits/tro_word_hits/tro_image_matches/logo_matches）"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/delogo/detect": {
+      "post": {
+        "tags": [
+          "delogo"
+        ],
+        "summary": "图片LOGO识别（免费, ≤10张/次）",
+        "description": "消耗：0。Scope：`write:check`。OCR 识别图上文字→认出 LOGO/水印词（商标/TRO/水印特征，不误删商品参数字）+读不出的花体标建议框+CLIP 图形标预警。`own_brands` 豁免自有品牌（驰名/TRO 不豁免）。返回 `file_name` 供 /delogo/apply 使用。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "images": [
+                  {
+                    "id": "img1",
+                    "image_url": "https://i5.walmartimages.com/....jpg"
+                  }
+                ],
+                "own_brands": [
+                  "MyBrand"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "识别结果（logo_words/suggest_boxes/graphic_brand/has_logo/file_name）"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/delogo/apply": {
+      "post": {
+        "tags": [
+          "delogo"
+        ],
+        "summary": "一键去LOGO（2 S算力/张, 成功才计）",
+        "description": "消耗：**2 S算力/张**（按成功数）。Scope：`write:check`。需 key 所属账号已开通去LOGO权限。`model`: fast(秒级填充) | lama(精修)。keywords=要去除的文字，boxes=手动框（归一化 [x1,y1,x2,y2]，图形标兜底）。输出图走直连域（沃尔玛爬虫可抓）。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "file_name": "src_xxx.jpg",
+                    "keywords": [
+                      "Nike"
+                    ],
+                    "boxes": []
+                  }
+                ],
+                "model": "fast"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "处理结果（new_url/removed/engine）"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/optimize/ai": {
+      "post": {
+        "tags": [
+          "optimize"
+        ],
+        "summary": "AI listing 改写（去风险词）",
+        "description": "消耗：**18 S算力/SKU**（按成功数扣，≤50）。Scope：`write:optimize`。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "title": "Nike Air Shoes",
+                    "brand": "Nike",
+                    "features": [
+                      "cushion"
+                    ],
+                    "description": "...",
+                    "riskHits": [
+                      "Nike"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "改写结果"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/f6/hits": {
+      "get": {
+        "tags": [
+          "f6"
+        ],
+        "summary": "F6 命中列表",
+        "description": "消耗：0。Scope：`read:f6`。参数 `limit`(≤200)、`offset`。",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "命中记录"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/f6/blacklist": {
+      "post": {
+        "tags": [
+          "f6"
+        ],
+        "summary": "新增黑名单地址",
+        "description": "消耗：0。Scope：`write:f6`。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "street": "300 S Wacker Dr",
+                "city": "Chicago",
+                "state": "IL",
+                "zip": "60606",
+                "risk_reason": "自有名单"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "已创建"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/f6/blacklist/{id}": {
+      "delete": {
+        "tags": [
+          "f6"
+        ],
+        "summary": "删除黑名单地址（仅本人添加）",
+        "description": "消耗：0。Scope：`write:f6`。不可删除系统默认名单。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已删除"
+          },
+          "400": {
+            "description": "参数错误",
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "description": "API Key 无效",
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "S算力 余额不足",
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "scope 不足 / 套餐不支持",
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "description": "不存在或无权"
+          },
+          "429": {
+            "description": "超出频率限制",
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "SafeSell AI API key",
+        "description": "Bearer API Key"
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "标准错误",
+        "content": {
+          "application/json": {
+            "example": {
+              "success": false,
+              "error": {
+                "code": "invalid_api_key",
+                "message": "API Key 无效或已撤销"
+              },
+              "meta": {
+                "request_id": "req_xxx"
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorCodes": {
+        "type": "string",
+        "enum": [
+          "invalid_api_key",
+          "insufficient_scope",
+          "plan_not_eligible",
+          "rate_limit",
+          "scoin_insufficient",
+          "invalid_request",
+          "not_found",
+          "internal_error",
+          "upstream_error"
+        ]
+      }
+    }
+  }
+}

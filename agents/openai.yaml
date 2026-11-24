@@ -1,0 +1,4 @@
+interface:
+  display_name: "SafeSell AI"
+  short_description: "跨境电商上架前排查、店铺体检、插件与 MCP 的操作手册"
+  default_prompt: "用 $safesellai 帮我选择合适的排查入口并核对结果、权限和费用。"
